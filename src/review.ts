@@ -1,6 +1,7 @@
-import {error, info, warning} from '@actions/core'
+// @ts-nocheck
+import {error, info, warning} from './gitlab-core'
 // eslint-disable-next-line camelcase
-import {context as github_context} from '@actions/github'
+import {context as github_context} from './gitlab-adapter'
 import pLimit from 'p-limit'
 import {type Bot} from './bot'
 import {
@@ -13,7 +14,7 @@ import {
   SUMMARIZE_TAG
 } from './commenter'
 import {Inputs} from './inputs'
-import {octokit} from './octokit'
+import {octokit} from './gitlab-adapter'
 import {type Options} from './options'
 import {type Prompts} from './prompts'
 import {getTokenCount} from './tokenizer'

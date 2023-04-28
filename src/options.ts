@@ -1,4 +1,4 @@
-import {info} from '@actions/core'
+import {info} from './gitlab-core'
 import {minimatch} from 'minimatch'
 import {TokenLimits} from './limits'
 

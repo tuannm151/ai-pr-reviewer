@@ -1,6 +1,4 @@
-import './fetch-polyfill'
-
-import {info, setFailed, warning} from '@actions/core'
+import {info, setFailed, warning} from './gitlab-core'
 import {
   ChatGPTAPI,
   ChatGPTError,
