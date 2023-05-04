@@ -12,7 +12,12 @@ const defaultYml = yaml.parse(
 )
 
 export const getBooleanInput = (key: string) => {
-  return Boolean(defaultYml.inputs[key].default)
+  const defaultValue = defaultYml.inputs[key].default
+  if (typeof defaultValue === 'string') {
+    return defaultValue === 'true'
+  } else {
+    return Boolean(defaultValue)
+  }
 }
 export const getInput = (key: string) => {
   return defaultYml.inputs[key].default

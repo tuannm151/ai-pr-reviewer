@@ -1,7 +1,7 @@
 // @ts-nocheck
-import {info, warning} from '@actions/core'
+import {info, warning} from './gitlab-core'
 // eslint-disable-next-line camelcase
-import {context as github_context} from '@actions/github'
+import {context as github_context} from './gitlab-adapter'
 import {octokit} from './gitlab-adapter'
 
 // eslint-disable-next-line camelcase
