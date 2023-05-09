@@ -1,18 +1,7 @@
 /* eslint-disable no-console */
-import {fileURLToPath} from 'node:url'
-import path from 'node:path'
-import {readFileSync} from 'node:fs'
-import yaml from 'yaml'
-
-const defaultYml = yaml.parse(
-  readFileSync(
-    path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../action.yml'),
-    'utf-8'
-  )
-)
 
 export const getBooleanInput = (key: string) => {
-  const defaultValue = defaultYml.inputs[key].default
+  const defaultValue = process.env[key]
   if (typeof defaultValue === 'string') {
     return defaultValue === 'true'
   } else {
@@ -20,10 +9,10 @@ export const getBooleanInput = (key: string) => {
   }
 }
 export const getInput = (key: string) => {
-  return defaultYml.inputs[key].default
+  return process.env[key]
 }
 export const getMultilineInput = (key: string) => {
-  return defaultYml.inputs[key].default.split('\n')
+  return process.env[key]?.split('\n')
 }
 
 export const setFailed = console.log

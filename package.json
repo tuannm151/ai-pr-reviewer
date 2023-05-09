@@ -4,7 +4,6 @@
   "private": true,
   "description": "OpenAI-based PR Reviewer and Summarizer.",
   "main": "lib/main.js",
-  "type": "module",
   "scripts": {
     "build": "cp node_modules/@dqbd/tiktoken/tiktoken_bg.wasm dist/tiktoken_bg.wasm && tsc",
     "package": "ncc build --license licenses.txt",
@@ -13,7 +12,8 @@
     "format-check": "prettier --check '**/*.ts'",
     "lint": "eslint src/**/*.ts",
     "test": "jest",
-    "all": "npm run build && npm run format && npm run lint && npm run package && npm test"
+    "all": "npm run build && npm run format && npm run lint && npm run package && npm test",
+    "package-gitlab": "cp node_modules/@dqbd/tiktoken/tiktoken_bg.wasm dist/tiktoken_bg.wasm && ncc build ./src/gitlab-main.ts -s"
   },
   "repository": {
     "type": "git",
@@ -29,7 +29,7 @@
     "@actions/core": "^1.10.0",
     "@actions/github": "^5.1.1",
     "@dqbd/tiktoken": "^1.0.7",
-    "@gitbeaker/node": "^35.8.1",
+    "@gitbeaker/rest": "^38.3.0",
     "@octokit/action": "^5.0.2",
     "@octokit/plugin-retry": "^4.1.3",
     "@octokit/plugin-throttling": "^5.1.1",
@@ -46,6 +46,7 @@
     "@typescript-eslint/parser": "^5.59.2",
     "@vercel/ncc": "^0.36.1",
     "chatgpt": "^5.2.4",
+    "dotenv": "^16.0.3",
     "eslint": "^8.39.0",
     "eslint-config-standard-with-typescript": "^34.0.1",
     "eslint-plugin-github": "^4.6.1",

@@ -3,33 +3,35 @@
 /* eslint-disable */
 
 import gitlabENV from 'gitlab-ci-env'
-import {Gitlab, Types} from '@gitbeaker/node'
-
-interface IOverrideNotePosition extends Types.DiscussionNotePosition {
-  line_range: {
-    start: {
-      line_code: string
-      type: string
-      old_line: null | number
-      new_line: number
-    }
-    end: {
-      line_code: string
-      type: string
-      old_line: null | number
-      new_line: number
-    }
-  }
-}
+import type {MergeRequestDiscussionNotePositionOptions} from '@gitbeaker/rest'
+import {Gitlab} from '@gitbeaker/rest'
 
 const api = new Gitlab({
   host: process.env.GITLAB_HOST,
   token: process.env.GITLAB_PERSONAL_TOKEN
 })
 
+interface DiscussionNotePositionBaseSchema extends Record<string, unknown> {
+  base_sha: string
+  start_sha: string
+  head_sha: string
+  position_type: 'text' | 'image'
+  old_path?: string
+  new_path?: string
+}
+type DiscussionNotePositionTextSchema = DiscussionNotePositionBaseSchema & {
+  position_type: 'text'
+  new_line?: string
+  old_line?: string
+  line_range?: {
+    start?: Record<string, unknown>
+    end?: Record<string, unknown>
+  }
+}
+
 interface IBaseParams {
-  owner: string
-  repo: string
+  owner?: string
+  repo?: string
 }
 
 interface IPageParams extends IBaseParams {
@@ -117,6 +119,7 @@ export const octokit = {
       pull_number,
       body
     }: IBaseParams & {pull_number: number; body: string}) {
+      console.log('update desc:', body)
       const res = await api.MergeRequests.edit(
         gitlabENV.ci.project.id,
         pull_number,
@@ -127,41 +130,71 @@ export const octokit = {
       }
     },
     async updateReviewComment({comment_id, body}: IUpdateComment) {
+      console.log('update ReviewComment:', body)
       const res = await api.MergeRequestNotes.edit(
         gitlabENV.ci.project.id,
-        gitlabENV.ci.mergeRequest.iid,
+        context.payload.pull_request.number,
         comment_id,
-        body
+        {body}
       )
       return {
         data: res
       }
     },
+    // use for create file changes comment
     async createReviewComment({
       pull_number,
       commit_id,
       body,
       path,
-      line,
-      start_side,
-      start_line
+      line: end_line,
+      start_line // maybe undefined
     }: ICreateReviewComment) {
+      const line_range = start_line ? end_line - start_line + 1 : 1
+      const content = start_line
+        ? body.replace(
+            /```suggestion\s/,
+            '```suggestion:-' + line_range + '+0\n'
+          )
+        : body
+      const opts = Object.assign(
+        {
+          commitId: commit_id
+        },
+
+        {
+          position: Object.assign(
+            {
+              baseSha: context.payload.pull_request.base.sha,
+              startSha: context.payload.pull_request.base.sha,
+              headSha: context.payload.pull_request.head.sha,
+              positionType: 'text',
+              newLine: end_line.toString(),
+              newPath: path.toString()
+            } as MergeRequestDiscussionNotePositionOptions,
+            start_line
+              ? {
+                  lineRange: {
+                    start: {
+                      type: 'new',
+                      lineCode: start_line.toString()
+                    },
+                    end: {
+                      type: 'new',
+                      lineCode: end_line.toString()
+                    }
+                  }
+                }
+              : {}
+          )
+        }
+      )
+      console.log('createReviewComment:', content)
       const res = await api.MergeRequestDiscussions.create(
         gitlabENV.ci.project.id,
         pull_number,
-        body,
-        {
-          commit_id,
-          position: {
-            base_sha: context.payload.pull_request.base.sha,
-            start_sha: context.payload.pull_request.base.sha,
-            head_sha: context.payload.pull_request.head.sha,
-            position_type: 'text',
-            new_path: path,
-            old_path: path, // TODO: need to get old_path
-            new_line: line
-          }
-        }
+        content,
+        opts
       )
       return {data: res}
     },
@@ -180,31 +213,34 @@ export const octokit = {
         {page, perPage: per_page}
       )
       const data: any[] = []
-      res
-        .filter(e => e.individual_note === false) // TODO: explain it
-        .forEach(e => {
-          e.notes?.forEach((note, index, arr) => {
+      res.forEach(e => {
+        e.notes
+          ?.filter(e => !e?.system)
+          .forEach((note, index, arr) => {
+            const position = note.position as DiscussionNotePositionTextSchema
+            const start_line = (position?.line_range?.start?.new_line ||
+              position?.line_range?.start?.line_code ||
+              position?.new_line) as string
+            const end_line = (position?.line_range?.end?.new_line ||
+              position?.line_range?.end?.line_code ||
+              position?.new_line) as string
             data.push({
               ...note,
-              path: note.position?.new_path,
-              start_line:
-                (note.position as IOverrideNotePosition)?.line_range?.start
-                  .new_line || note.position?.new_line,
-              line:
-                (note.position as IOverrideNotePosition)?.line_range?.end
-                  .new_line || note.position?.new_line,
+              path: position?.new_path,
+              start_line: parseInt(start_line || '0'),
+              line: parseInt(end_line || '0'),
               in_reply_to_id: index === 0 ? null : arr[0].id,
               user: {...note.author, login: note.author.name}
             })
           })
-        })
+      })
 
       return {
         data
       }
     },
     async listCommits({page}: IPageParams & {issue_number: number}) {
-      const res = await api.MergeRequests.commits(
+      const res = await api.MergeRequests.allCommits(
         gitlabENV.ci.project.id,
         parseInt(gitlabENV.ci.mergeRequest.iid)
       )
@@ -217,6 +253,7 @@ export const octokit = {
       issue_number,
       body
     }: IBaseParams & {issue_number: number; body: string}) {
+      console.log('issue.createComment:', body)
       const res = await api.MergeRequestNotes.create(
         gitlabENV.ci.project.id,
         issue_number,
@@ -226,27 +263,30 @@ export const octokit = {
         data: res
       }
     },
+    // use for update Summary of Changes
     async updateComment({comment_id, body}: IUpdateComment) {
+      console.log('issue.updateComment:', body)
       const res = await api.MergeRequestNotes.edit(
         gitlabENV.ci.project.id,
-        gitlabENV.ci.mergeRequest.iid,
+        context.payload.pull_request.number,
         comment_id,
-        body
+        {body}
       )
       return {
         data: res
       }
     },
-    async listComments({page, per_page}: IPageParams & {issue_number: number}) {
-      const res = await api.MergeRequestNotes.all(
-        gitlabENV.ci.project.id,
-        gitlabENV.ci.mergeRequest.iid,
-        {
-          page,
-          perPage: per_page
-        }
-      )
-      return {data: res.filter(e => !e?.system)}
+    async listComments({
+      issue_number,
+      page,
+      per_page
+    }: IPageParams & {issue_number: number}) {
+      // this notes will include all notes
+      return octokit.pulls.listReviewComments({
+        pull_number: issue_number,
+        per_page,
+        page
+      })
     }
   }
 }
@@ -255,7 +295,7 @@ export const context = {
   eventName: process.env.GITHUB_EVENT_NAME,
   repo: {
     // @ts-ignore
-    owner: gitlabENV.ci.project.path.match(/^(.+)\/([^/]+)$/)[1],
+    owner: gitlabENV.ci.project.path?.match(/^(.+)\/([^/]+)$/)[1],
     repo: gitlabENV.ci.project.name
   },
   // payload from process.env.GITHUB_EVENT_PATH
@@ -268,11 +308,9 @@ export const context = {
       }
     },
     pull_request: {
-      title: gitlabENV.ci.commit.title,
-      number: gitlabENV.ci.mergeRequest.iid,
-      // can't get from gitlab env, if null, will skip get `getDescription` and `getReleaseNotes`
-      // TODO: maybe can add a pre task to set this environment variable
-      body: null,
+      title: gitlabENV.ci.mergeRequest.title,
+      number: parseInt(gitlabENV.ci.mergeRequest.iid, 10),
+      body: null as null | string,
       base: {
         sha: gitlabENV.ci.mergeRequest.diff.baseSha
       },
@@ -286,5 +324,14 @@ export const context = {
     // },
     comment: '', // for review comment
     action: 'created' // hardcode
+  }
+}
+
+export const setMRBody = async () => {
+  const pr = await octokit.pulls.get({
+    pull_number: context.payload.pull_request.number
+  })
+  if (pr.data.body) {
+    context.payload.pull_request.body = pr.data.body
   }
 }

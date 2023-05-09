@@ -5,6 +5,7 @@ import {
   setFailed,
   warning
 } from './gitlab-core'
+import {setMRBody} from './gitlab-adapter'
 import {Bot} from './bot'
 import {OpenAIOptions, Options} from './options'
 import {Prompts} from './prompts'
@@ -70,6 +71,7 @@ async function run(): Promise<void> {
       process.env.GITHUB_EVENT_NAME === 'pull_request' ||
       process.env.GITHUB_EVENT_NAME === 'pull_request_target'
     ) {
+      await setMRBody()
       await codeReview(lightBot, heavyBot, options, prompts)
     } else if (
       process.env.GITHUB_EVENT_NAME === 'pull_request_review_comment'
