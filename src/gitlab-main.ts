@@ -15,7 +15,8 @@ import {codeReview} from './review'
 async function run(): Promise<void> {
   const options: Options = new Options(
     getBooleanInput('debug'),
-    getBooleanInput('summary_only'),
+    getBooleanInput('disable_review'),
+    getBooleanInput('disable_release_notes'),
     getInput('max_files'),
     getBooleanInput('review_simple_changes'),
     getBooleanInput('review_comment_lgtm'),
@@ -26,7 +27,8 @@ async function run(): Promise<void> {
     getInput('openai_model_temperature'),
     getInput('openai_retries'),
     getInput('openai_timeout_ms'),
-    getInput('openai_concurrency_limit')
+    getInput('openai_concurrency_limit'),
+    getInput('openai_base_url')
   )
 
   // print options
