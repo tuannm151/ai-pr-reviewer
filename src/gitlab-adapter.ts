@@ -8,7 +8,7 @@ import {Gitlab} from '@gitbeaker/rest'
 
 const api = new Gitlab({
   host: process.env.GITLAB_HOST,
-  token: process.env.GITLAB_PERSONAL_TOKEN
+  token: process.env.GITLAB_PERSONAL_TOKEN || ''
 })
 
 interface DiscussionNotePositionBaseSchema extends Record<string, unknown> {

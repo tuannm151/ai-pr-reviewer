@@ -9,6 +9,7 @@ const RetryAndThrottlingOctokit = Octokit.plugin(throttling, retry)
 export const octokit = new RetryAndThrottlingOctokit({
   auth: `token ${token}`,
   throttle: {
+    // @ts-ignore - package source Types are wrong
     onRateLimit: (
       retryAfter: number,
       options: any,
@@ -21,7 +22,7 @@ Retry after: ${retryAfter} seconds
 Retry count: ${retryCount}
 `
       )
-      return true
+      return
     },
     onSecondaryRateLimit: (_retryAfter: number, options: any) => {
       warning(
