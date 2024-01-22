@@ -1,5 +1,7 @@
 import {type Inputs} from './inputs'
-
+const a = 1;
+const b = 2;
+a = b;
 export class Prompts {
   summarize: string
   summarizeReleaseNotes: string
